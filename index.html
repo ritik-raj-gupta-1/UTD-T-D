@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>UTD T&D - Truth & Dare</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS variables and global styles */
+        :root {
+            --bg-color: #010314;
+            --accent-color: #00bfff;
+            --text-color: #ffffff;
+            --app-height: 100vh; /* Fallback */
+        }
+
+        /* Base styles and reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Rajdhani', sans-serif;
+            -webkit-tap-highlight-color: transparent; /* Disable tap highlight on mobile */
+            /* Hypnotic background grid */
+            background-image: 
+                linear-gradient(rgba(0, 191, 255, 0.07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 191, 255, 0.07) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        /* Main application container */
+        .app-container {
+            width: 100%;
+            height: var(--app-height);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        /* Screens (Setup vs. Game) */
+        .screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transition: opacity 0.5s, transform 0.5s;
+            backface-visibility: hidden; /* Prevent flicker during transitions */
+        }
+
+        .screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95);
+        }
+
+        /* Setup screen styles */
+        #setup-screen {
+            gap: 20px;
+        }
+
+        .logo {
+            font-size: 2.8rem; /* Slightly larger */
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--accent-color);
+            text-shadow: 0 0 15px var(--accent-color);
+        }
+
+        .setup-card {
+            background: rgba(10, 25, 47, 0.7); /* Deeper blue background */
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(0, 191, 255, 0.3);
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--accent-color);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: none;
+            background: linear-gradient(45deg, var(--accent-color), #00a0d0);
+            color: var(--bg-color);
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s, color 0.2s;
+            box-shadow: 0 2px 10px rgba(0, 191, 255, 0.3);
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 191, 255, 0.5);
+        }
+        
+        #player-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            min-height: 40px;
+        }
+
+        .player-tag {
+            background: rgba(0, 191, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 1px solid rgba(0, 191, 255, 0.3);
+        }
+
+        .game-mode-selector {
+            display: flex;
+            justify-content: space-around;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 5px;
+            border: 1px solid rgba(0, 191, 255, 0.1);
+        }
+
+        .mode-btn {
+            width: 33.33%;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            color: var(--text-color);
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background-color 0.3s;
+            font-weight: 500;
+        }
+
+        .mode-btn.active {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            font-weight: 700;
+        }
+
+        /* Game screen styles */
+        .game-area-wrapper {
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.3s ease-out;
+        }
+        
+        @keyframes spin-dashed {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .arena {
+            position: relative;
+            width: 95%;
+            height: 95%;
+            border-radius: 50%;
+            border: 3px solid var(--accent-color);
+            box-shadow: 0 0 25px var(--accent-color), inset 0 0 15px rgba(0, 191, 255, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .arena::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            border-radius: 50%;
+            border: 2px dashed rgba(0, 191, 255, 0.3);
+            animation: spin-dashed 40s linear infinite;
+        }
+        
+        .bottle-container {
+            width: 15%;
+            height: 40%;
+            position: absolute;
+            cursor: grab;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transform-origin: center center;
+        }
+        
+        .bottle-container:active {
+            cursor: grabbing;
+        }
+
+        .bottle-svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));
+        }
+
+        .player-name {
+            position: absolute;
+            transform: translate(-50%, -50%); /* Centering */
+            font-size: 1.2rem; /* Enhanced size */
+            font-weight: 700; /* Bolder */
+            padding: 2px 8px;
+            border-radius: 5px;
+            background: var(--bg-color);
+            transition: transform 0.2s, color 0.2s, text-shadow 0.2s;
+        }
+
+        .player-name.glowing {
+            color: rgba(0, 191, 255, 0.7);
+            text-shadow: 0 0 5px rgba(0, 191, 255, 0.7);
+        }
+        
+        .player-name.selected {
+            transform: translate(-50%, -50%) scale(1.4); /* More dramatic */
+            color: var(--accent-color);
+            text-shadow: 0 0 15px var(--accent-color), 0 0 5px white; /* Brighter glow */
+        }
+
+        /* Modal / Popup styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease-in-out;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .modal-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, rgba(10, 25, 47, 0.8), rgba(1, 3, 20, 0.8));
+            padding: 30px;
+            border-radius: 15px;
+            border: 1px solid var(--accent-color);
+            box-shadow: 0 0 30px rgba(0, 191, 255, 0.6);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+            transform: scale(0.9);
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .modal-overlay.visible .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-title {
+            font-size: 1.7rem; /* Enhanced size */
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+        
+        .modal-task-text {
+            font-size: 1.3rem; /* Enhanced size */
+            margin: 20px 0;
+            min-height: 50px;
+            color: var(--text-color);
+            line-height: 1.5;
+        }
+
+        .modal-title .player-highlight {
+            color: var(--accent-color);
+            display: block;
+            margin-top: 5px;
+            text-shadow: 0 0 10px var(--accent-color);
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .back-btn {
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            z-index: 10;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            background-color: rgba(0, 191, 255, 0.1);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-color);
+        }
+        .back-btn:hover {
+            transform: translateY(0px); /* Override hover effect */
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            box-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
+        }
+
+        .creator-credit {
+            position: absolute;
+            bottom: 20px;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.4);
+            letter-spacing: 1px;
+            transition: color 0.3s, text-shadow 0.3s;
+            cursor: default;
+        }
+
+        .creator-credit .heart {
+            color: #ff007f; /* Neon Pink */
+            text-shadow: 0 0 8px #ff007f;
+            font-size: 1rem;
+        }
+
+        .creator-credit:hover {
+            color: var(--text-color);
+            text-shadow: 0 0 5px rgba(0, 191, 255, 0.7);
+        }
+
+        /* Responsive Design for smaller screens */
+        @media (max-width: 380px) {
+            .game-area-wrapper {
+                transform: scale(0.85);
+            }
+            .player-name {
+                font-size: 1rem;
+            }
+            .logo {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <div id="setup-screen" class="screen">
+            <h1 class="logo">UTD T&D</h1>
+            <div class="setup-card">
+                <label for="player-input">Enter Player Names (min 2):</label>
+                <div class="input-group">
+                    <input type="text" id="player-input" placeholder="e.g., Ritik">
+                    <button id="add-player-btn" class="btn">Add</button>
+                </div>
+                <div id="player-list"></div>
+                <div class="game-mode-selector">
+                    <button id="mode1-btn" class="mode-btn active">Simple</button>
+                    <button id="mode2-btn" class="mode-btn">Challenger</button>
+                    <button id="mode3-btn" class="mode-btn">Classic</button>
+                </div>
+                <button id="start-game-btn" class="btn" disabled>Start Game</button>
+            </div>
+            <p class="creator-credit">Made with <span class="heart">♥</span> by Ritik</p>
+        </div>
+
+        <div id="game-screen" class="screen hidden">
+            <button id="back-to-setup-btn" class="btn back-btn">Back</button>
+            <div class="game-area-wrapper">
+                <div class="arena" id="arena">
+                    <div class="bottle-container" id="bottle">
+                        <svg class="bottle-svg" viewBox="0 0 80 280" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" style="stop-color:rgba(200, 255, 255, 0.3)" />
+                                    <stop offset="50%" style="stop-color:rgba(200, 255, 255, 0.1)" />
+                                    <stop offset="100%" style="stop-color:rgba(200, 255, 255, 0.3)" />
+                                </linearGradient>
+                                <linearGradient id="capGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#cccccc" />
+                                    <stop offset="100%" style="stop-color:#888888" />
+                                </linearGradient>
+                            </defs>
+                            <path d="M10 280 L10 100 C10 70, 70 70, 70 100 L70 280 Z" fill="url(#glassGradient)" stroke="#FFFFFF" stroke-width="1.5"/>
+                            <path d="M30 100 L30 20 C30 5, 50 5, 50 20 L50 100 Z" fill="url(#glassGradient)" stroke="#FFFFFF" stroke-width="1.5"/>
+                            <rect x="25" y="0" width="30" height="15" fill="url(#capGradient)" rx="3"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+             <p class="creator-credit">Made with <span class="heart">♥</span> by Ritik</p>
+        </div>
+
+    </div>
+
+    <div id="modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="modal-title" class="modal-title">Challenge!</h2>
+            <p id="modal-task-text"></p>
+            <div id="modal-buttons" class="modal-buttons">
+                <button id="truth-btn" class="btn">Truth</button>
+                <button id="dare-btn" class="btn">Dare</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Keyboard-Proofing & App Height ---
+        const setAppHeight = () => {
+            const doc = document.documentElement;
+            doc.style.setProperty('--app-height', `${window.innerHeight}px`);
+        };
+        window.addEventListener('resize', setAppHeight);
+        setAppHeight();
+
+        // --- DOM Elements ---
+        const setupScreen = document.getElementById('setup-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const playerInput = document.getElementById('player-input');
+        const addPlayerBtn = document.getElementById('add-player-btn');
+        const playerList = document.getElementById('player-list');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const mode1Btn = document.getElementById('mode1-btn');
+        const mode2Btn = document.getElementById('mode2-btn');
+        const mode3Btn = document.getElementById('mode3-btn');
+        const arena = document.getElementById('arena');
+        const bottleEl = document.getElementById('bottle');
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalTaskText = document.getElementById('modal-task-text');
+        const modalButtons = document.getElementById('modal-buttons');
+        const backToSetupBtn = document.getElementById('back-to-setup-btn');
+        
+        // --- Game State ---
+        let players = [], gameMode = 1, isSpinning = false, playerElements = [], currentPlayer = null, turnCounter = 0;
+
+        // --- Scientifically Leveled Truths & Dares ---
+        const truths_l1 = [
+            "Tapra pe tumhari go-to order kya hai - chai ke saath?",
+            "Timepass ke liye better kya hai: BA Park ya Tapra?",
+            "Tapra se kharidi hui sabse faltu cheez kya hai?",
+            "Sach batana, bunk karne ke liye tumhari favourite jagah kaunsi hai?",
+            "Is group mein sabse contagious hasi kiski hai?",
+            "Apne phone ka wallpaper dikhao, no cheating.",
+            "Aakhri baar university mein kab roye the aur kyun?",
+            "Tumhara sabse ajeeb talent kya hai?",
+            "Agar ek din ke liye invisible ho jao, toh campus mein kya karoge?",
+            "Kaunsa Bollywood gaana tumhari life story perfectly describe karta hai?",
+            "Tumhara phone password number hai ya pattern?",
+            "Sabse embarrassing nickname kya hai tumhara jo dosto ne rakha hai?",
+            "Class mein sote hue pakde gaye ho kabhi?",
+            "Din mein kitne ghante phone use karte ho, honestly?",
+            "Apni sabse pehli crush ka naam batao."
+        ];
+        const dares_l1 = [
+            "Tapra wale bhaiya ki acting karo jo customer se deal kar raha hai.",
+            "Agle do round tak, sirf shuddh Hindi mein baat karo.",
+            "Maggi ke upar 30-second ka emotional speech do.",
+            "Apne opposite baithe insaan ki tareef karo, par sirf stationery words use karke.",
+            "Ek professor ki acting karo jise pata chala hai ki aadhi class gayab hai.",
+            "kisi celebrity ko call lagane ki acting karo.",
+            "Group ke liye ek 'cheesy' si shayari sunao.",
+            "Apna favourite animal ban ke dikhao for 30 seconds.",
+            "Siir pe bottle balance karke 10 kadam chalo.",
+            "Agle 5 minute tak, har sentence ke end mein 'Meow' bolo."
+        ];
+
+        // Level 2: The Gossip Circle (Getting Personal) - 35 Truths, 25 Dares
+        const truths_l2 = [
+            "Professor ko late assignment ke liye sabse bekaar bahana kya diya hai?",
+            "Kabhi kisi senior ya junior ko Insta ya Snap pe ghanto tak stalk kiya hai?",
+            "Bina kapde dhoye sabse lamba record kitna hai tumhara?",
+            "University life ka kaunsa secret hai jo gharwalo se chupaya hai?",
+            "Tumhare hisaab se, kaunse department ke students sabse zyada dramatic hain?",
+            "Campus pe kisi se bachne ke liye phone pe baat karne ka natak kiya hai?",
+            "Tumhara current, top-secret campus crush kaun hai?",
+            "Internal exam paas karne ke liye sabse bada 'jugaad' kya kiya hai?",
+            "Agar university Wi-Fi ko 1 se 10 pe rate karna ho, toh kitna doge?",
+            "Department ke WhatsApp group mein koi aisa message jise bhej kar regret hua ho?",
+            "Apne bestfriend ki sabse annoying aadat kya hai?",
+            "Tumhara first 'relationship' kitne din chala tha?",
+            "University mein aane ke baad, tumhare andar sabse bada change kya aaya hai?",
+            "Apne phone ki search history ka aakhri 5 item batao.",
+            "Agar paiso ki tension na ho, toh university ke baad kya karoge?",
+            "Kis cheez pe sabse zyada paise kharch karte ho - khana, kapde ya ghumna?",
+            "Group mein se kiski life advice sabse bekaar hoti hai?",
+            "Aisi kaunsi movie hai jise dekh kar har baar ro dete ho?",
+            "Apne current crush ki 3 aisi qualities batao jo tumhe pasand hain.",
+            "Kya tum 'love at first sight' mein believe karte ho?",
+            "Social media pe sabse cringy post kya daala hai aaj tak?",
+            "Apni family mein, tum kiske sabse close ho?",
+            "Future partner mein looks zyada important hai ya sense of humour?",
+            "Aakhri baar apne parents se jhoot kab bola tha aur kyun?",
+            "Apne aap ko 3 shabdo mein describe karo.",
+            "Tumhara 'dream destination' kaunsa hai?",
+            "Group mein sabse zyada kanjoos kaun hai?",
+            "Padhai ke alawa, tumhara hidden talent kya hai?",
+            "Kabhi kisi dost ke partner pe crush aaya hai?",
+            "University ka sabse overrated event kaunsa lagta hai?",
+            "Apne ex ya ex crush ke baare mein abhi kya sochte ho?",
+            "Kis baat pe sabse jaldi gussa aata hai?",
+            "Zindagi ka sabse bada dar kya hai?",
+            "Raat ko 2 baje, bhook lage toh tumhara go-to snack kya hota hai?",
+            "Aisi kaunsi cheez hai jo tumhare best friend ko bhi nahi pata?"
+        ];
+        const dares_l2 = [
+            "Group ko 30 second ke liye apni Instagram DM list dikhao.",
+            "Apne joote haath mein pehenlo agle turn tak.",
+            "Apne right mein baithe insaan ko ek pen aise becho jaise tumhari life ispe depend karti hai.",
+            "Mummy ko text karo 'Sab ho gaya, ab laash kahan chupani hai?'",
+            "Agle 3 minute tak, jo bhi karoge use documentary voice mein narrate karo.",
+            "Apne left wale insaan pe sabse cheesy pickup line maaro.",
+            "Group ko 10 minute ke liye apne WhatsApp pe ek funny status lagane do.",
+            "Group ki pasand ki ek Bollywood movie ka scene act karke dikhao.",
+            "Agle 5 minute tak, har baat pe 'Bilkul sahi kaha aapne!' bol ke agree karo.",
+            "Apne gallery ki 5th photo ko 5 minute ke liye WhatsApp status banao.",
+            "Group mein se kisi ek ki acting karke dikhao, aur baakiyon ko guess karna hai.",
+            "Kisi ek random contact ko call karke 'Happy Birthday' gaana sunao.",
+            "Floor pe 30 seconds ke liye 'breakdance' karne ki koshish karo.",
+            "Apne best friend ko text karo 'I need to tell you something serious' aur fir offline ho jao.",
+            "Ek Bollywood item song pe dance karke dikhao.",
+            "Apne sir pe 5 books rakh kar 1 minute tak balance karo.",
+            "Agle 10 minute tak, kisi se bhi baat karne se pehle 'Ahem Ahem, excuse me' bolna hai.",
+            "Apna phone unlock karke group mein ghumao, 1 minute ke liye.",
+            "Kisi ek senior ko WhatsApp pe 'Hi, can I get your notes?' text karo.",
+            "Apne kaan ko jeebh se touch karne ki koshish karo.",
+            "Agle round tak, ek robot ki tarah baat aur walk karo.",
+            "Ek minute ke liye plank position mein raho.",
+            "Apni aankhein band karke, group mein se kisi ek ka chehra touch karke pehchano.",
+            "Group ke har member ko ek Bollywood character ka naam do."
+        ];
+
+        // Level 3: The Inner Sanctum (Edgy & Hyper-Local) - 45 Truths, 35 Dares
+        const truths_l3 = [
+            "Honestly, BA Park mein log chill karne jaate hain ya dusro ko stalk karne?",
+            "Tapra pe baith kar suni hui sabse shocking gossip kya hai?",
+            "Kabhi Acharaya Shankar Bhawan ki khaali classroom 'special studying' ke liye use ki hai?",
+            "Is group mein se kiske saath Kanad Bhawan ki andheri classroom mein phansna sabse scary hoga?",
+            "Lecture ke time, khaali classroom mein sabse lamba kitni der tak timepass kiya hai?",
+            "BA Park mein kabhi kuch aisa dekha hai jise dekh kar socha ho 'Hey Bhagwan, ye maine kya dekh liya'?",
+            "Sach batana, Kanad ya Shankar Bhawan ki 'privacy' ko secret phone call ke liye use kiya hai?",
+            "DHSGSU ke baare mein suni hui sabse funny afwaah (rumour) kya hai?",
+            "Tumhari class mein notes-ka-baadshah kaun hai jiske peeche exam time sab pagal rehte hain?",
+            "Agar Tapra ki ek dukaan 24/7 khulwa sako, toh woh kaunsi hogi aur kyun?",
+            "Group mein se kiski relationship advice 'zeher' ke samaan hai?",
+            "Apne future partner mein aisi kaunsi ek 'deal-breaker' aadat hai jise tum seh nahi sakte?",
+            "Tumhari sabse badi insecurity kya hai?",
+            "Agar group mein se kisi ek ke saath date pe jaana pade, toh woh kaun hoga aur kyun?",
+            "First kiss ka experience kaisa tha?",
+            "Apni life ki sabse badi galti kya maante ho?",
+            "Relationship mein, tumne kabhi cheat kiya hai ya socha hai?",
+            "Tumhari weirdest fantasy kya hai?",
+            "Group mein se kisko secretly sabse zyada attractive maante ho?",
+            "Apne phone mein aisi kaunsi photo hai jise kisi ko nahi dikha sakte?",
+            "Aakhri baar 'I love you' kise bola tha (family ke alawa)?",
+            "Ek aisi cheez jo tum apne baare mein badalna chahoge?",
+            "Kya tumne kabhi kisi dost ka secret kisi aur ko bataya hai?",
+            "Tumhara 'type' kya hai? (Qualities in a partner)",
+            "Sabse ajeeb jagah kaunsi hai jahan tumne kisi ko kiss kiya hai?",
+            "Online dating apps use kiye hain? Kaisa experience raha?",
+            "Apne looks ko 1 se 10 pe kitna rate karoge?",
+            "Group ke kis member ki social media profile sabse zyada 'fake' lagti hai?",
+            "Agar tumhe pata chale tumhara partner tumhare best friend pe try maar raha hai, toh kya karoge?",
+            "University life ki sabse wild party kaunsi thi?",
+            "Kitne logo ko ab tak block kar chuke ho Instagram/WhatsApp pe?",
+            "Apna sabse dark secret batao.",
+            "Class ke dauraan, professor ke alawa kya-kya sochte ho?",
+            "Apna ATM pin reverse karke batao (Just kidding, don't!)... Asli question: Aakhri baar Google pe kya search kiya tha?",
+            "Kabhi kisi teacher pe crush hua hai?",
+            "Tumhare hisaab se, pyaar aur paiso mein kya zyada zaroori hai?",
+            "Agar group mein se kisi ek ke saath ghar basana pade, toh kise chunoge?",
+            "Aisa kaunsa jhoot hai jo tumne bola aur aaj tak pakda nahi gaya?",
+            "Kya tum 'friends with benefits' concept mein believe karte ho?",
+            "Kisi public place pe hui sabse embarrassing ghatna batao.",
+            "Apne current relationship status se khush ho?",
+            "University ki sabse overrated couple, tumhare hisaab se kaun hai?",
+            "Apne phone ka last screenshot dikhao, no excuses.",
+            "Apni sabse ajeeb aadat (weirdest habit) kya hai?",
+            "Agar tumhe superpower mile ki tum logo ka mind read kar sako, toh sabse pehle kiska karoge is group mein?"
+        ];
+        const dares_l3 = [
+            "WhatsApp status lagao, 'Kanad Bhawan mein kho gaya/gayi, samosa aur madad bhejo.' 10 min tak.",
+            "Apne contact list ke 5th person ko voice note bhejo 'Mujhe pata hai tumne BA Park mein kya kiya tha'.",
+            "Ek secret agent ki tarah group ke kisi member se 1 minute tak 'interrogation' karo.",
+            "Tapra mein chairs ki kami ko lekar ek 'press conference' karo.",
+            "Group ko apne agle Instagram post ke liye ek embarrassing caption likhne do.",
+            "Game mein na khel rahe kisi dost ko call karke convince karo ki tum ek nayi chai ki tapra khol rahe ho.",
+            "Ek kone mein jaakar 1 minute tak deewar se serious baatein karo.",
+            "Group mein se kisi se apni alag pehchaan (DHSGSU-related word) apne maathe pe likhwao aur guess karo.",
+            "Apne left wale insaan ko uske hangout spot choice ke liye funny tareeke se 'shame' karo.",
+            "Apne crush ko text karo 'Suno...' aur fir 10 minute tak reply mat karna.",
+            "Yahan baithe kisi ek person ke baare mein ek 'fake rumour' start karo aur sabko convince karo.",
+            "Apne right wale insaan ko dramatic andaaz mein propose karo.",
+            "Apne phone se, apne papa ko 'I have a girlfriend/boyfriend' text karo (aur fir turant delete for everyone kar dena!).",
+            "Group ke saamne 2 minute tak, ek 'so-called' intellectual ki tarah difficult English words use karke baat karo.",
+            "Kisi ka bhi phone le kar, uske best friend ko 'Hey, I miss you' text kar do.",
+            "Apne ex ya ex crush ko (agar comfortable ho toh) 'Thinking of you' text karo.",
+            "Apne T-shirt ko ulta karke pehen lo for the rest of the game.",
+            "Group ke har member ke baare mein ek achhi aur ek buri aadat batao.",
+            "Apni aankhein band karke, apne bag se koi 3 cheezein nikalo aur unka use batao.",
+            "Sabke saamne, apne phone ki photo gallery ko 1 minute tak scroll karo.",
+            "Kisi famous YouTuber ki tarah agle 5 minute tak vlog banao.",
+            "Apne purse/wallet mein jitne paise hain, sabko dikhao.",
+            "Ek minute tak, aisi language mein baat karo jo kisi ko samajh na aaye.",
+            "Group ke sabse shant insaan ko hasane ki koshish karo.",
+            "Apni contact list open karo, aankh band karke scroll karo aur jahan ruke, usse call lagao.",
+            "Apni sabse embarrassing photo dikhao phone mein.",
+            "Kisi ko bhi video call karke, 10 second tak ajeeb ajeeb chehre banao.",
+            "Room mein rakhi kisi bhi cheez se 'fashion walk' karke dikhao.",
+            "Ek bhoot ki tarah agle 5 minute tak behave karo.",
+            "Social media pe apne naam ke aage 'Khiladi' likh lo for 1 hour.",
+            "Apna phone do aur group ko koi bhi ek app uninstall karne do (game app).",
+            "Ek minute ke liye stand-up comedy karke dikhao.",
+        ];
+
+        // Level 4: The Legend Maker (Creating Inside Jokes) - 25 Truths, 20 Dares
+        const truths_l4 = [
+            "Is game ke hisaab se, is group mein kiski university life sabse wild hai?",
+            "Aaj is game mein kisi ke baare mein kya naya pata chala jo surprising tha?",
+            "Agar hamara friend group ek university department hota, toh kaunsa department hota?",
+            "Tumhare hisaab se, apne university se kaun famous banega?",
+            "Aaj raat is game mein bola gaya sabse bada jhoot kya tha?",
+            "University ke baad, 5 saal mein apne aap ko kahan dekhte ho?",
+            "Life ka ultimate goal kya hai - khushi, paisa ya pyaar?",
+            "Is group mein, tum sabse zyada kispe bharosa karte ho?",
+            "Apni life ki sabse badi achievement kya maante ho ab tak?",
+            "Ek aisi aadat jo tum badalna chahte ho.",
+            "Is group ke har member se seekhi hui ek cheez batao.",
+            "Agar time travel kar sako, toh past mein jaoge ya future mein?",
+            "Tumhari 'perfect date' kaisi hogi?",
+            "Zindagi mein sabse zyada kis cheez se darte ho?",
+            "Agar kal tumhari lottery lag jaye, toh sabse pehle kya karoge?",
+            "Group ke kis member ke saath tum ek deserted island pe phasna chahoge?",
+            "Apne bachpan ka sabse pyara moment batao.",
+            "Tumhe kis tarah ke log bilkul pasand nahi hain?",
+            "Aisa kaunsa gaana hai jo tum akele mein sunte ho, par kisi ko batate nahi?",
+            "Apni sabse badi taakat (strength) aur kamzori (weakness) kya maante ho?",
+            "Pehli nazar ke pyaar mein vishwas hai?",
+            "Is group mein sabse mature kaun hai, aur sabse childish?",
+            "Zindagi ka sabse important lesson kya seekha hai ab tak?",
+            "Agar duniya khatam hone wali ho, toh aakhri 24 ghante kaise bitaoge?",
+            "Aaj ke game ke baad, is group ke baare mein tumhari kya opinion hai?"
+        ];
+        const dares_l4 = [
+            "Apne opposite baithe insaan ke saath ek secret group handshake banao.",
+            "Ek 30-second ki acceptance speech do 'Best Gamer' award jeetne ke liye.",
+            "Group ke har member ko ek funny, university-themed nickname do.",
+            "Us insaan ke liye slow clap karo jiska answer aaj sabse funny tha.",
+            "Is game session ke upar ek chhota sa, funny rap bana ke sunao.",
+            "Group hug! Sab log ek group hug karo.",
+            "Sabke liye agle round mein chai/coffee order karne ka promise karo.",
+            "Ek group selfie lo, par sabko ajeeb sa chehra banana hai.",
+            "Agle 5 minute tak, group ke 'mascot' ki tarah behave karo.",
+            "Is group ka ek WhatsApp group banao aur uska naam rakho 'The Arena Legends'.",
+            "Sabke signatures ek paper pe lo, jaise tum unke fan ho.",
+            "Har member ke liye ek 'future prediction' karo.",
+            "Group ke baare mein 3 achhi baatein bolo.",
+            "Agle game ke liye 'Game Master' banne ka zimma lo.",
+            "Sabko ek ek karke, unki sabse achhi quality batao.",
+            "Apne phone pe agle 1 ghante ke liye, group ki selfie ko wallpaper lagao.",
+            "Game ke end mein, sabse 'sporting' player ke liye taali bajwao.",
+            "Ek aisi movie ka naam batao jo is group ko saath mein dekhni chahiye.",
+            "Sabka 'autograph' apne haath pe lo.",
+        ];
+        
+        let shuffledTruths = {l1: [], l2: [], l3: [], l4: []};
+        let shuffledDares = {l1: [], l2: [], l3: [], l4: []};
+
+        // --- Realistic Bottle Class ---
+        class Bottle {
+            constructor(element) {
+                this.element = element; this.angle = 0; this.velocity = 0;
+                this.friction = 0.991; this.totalRotation = 0;
+                this.lastAnimationTime = null; this.animationFrame = null;
+                this.lastHighlightedIndex = null;
+            }
+            spin(initialVelocity) {
+                if (isSpinning) return;
+                isSpinning = true; this.velocity = initialVelocity; this.totalRotation = 0;
+                this.lastAnimationTime = performance.now(); this.lastHighlightedIndex = null;
+                this.update();
+            }
+            update() {
+                const now = performance.now();
+                const deltaTime = this.lastAnimationTime ? (now - this.lastAnimationTime) / 16.67 : 1;
+                this.lastAnimationTime = now;
+                if (Math.abs(this.velocity) > 0.1) {
+                    this.angle += this.velocity * deltaTime;
+                    this.totalRotation += Math.abs(this.velocity * deltaTime);
+                    this.velocity *= Math.pow(this.friction, deltaTime);
+                    this.element.style.transform = `rotate(${this.angle}deg)`;
+                    this.updateGlow();
+                    this.animationFrame = requestAnimationFrame(() => this.update());
+                } else { this.stop(); }
+            }
+            updateGlow() {
+                if (players.length === 0) return;
+                const sliceSize = 360 / players.length;
+                const sliceOffset = sliceSize / 2;
+                const normalizedAngle = ((this.angle % 360) + 360) % 360;
+                const finalPointerAngle = (normalizedAngle + sliceOffset) % 360;
+                const currentIndex = Math.floor(finalPointerAngle / sliceSize);
+                if (this.lastHighlightedIndex !== currentIndex) {
+                    if (this.lastHighlightedIndex !== null && playerElements[this.lastHighlightedIndex]) {
+                        playerElements[this.lastHighlightedIndex].classList.remove('glowing');
+                    }
+                    if (playerElements[currentIndex]) {
+                        playerElements[currentIndex].classList.add('glowing');
+                    }
+                    this.lastHighlightedIndex = currentIndex;
+                }
+            }
+            stop() {
+                cancelAnimationFrame(this.animationFrame);
+                this.velocity = 0; isSpinning = false; this.lastAnimationTime = null;
+                if(this.lastHighlightedIndex !== null && playerElements[this.lastHighlightedIndex]) {
+                    playerElements[this.lastHighlightedIndex].classList.remove('glowing');
+                }
+                this.lastHighlightedIndex = null;
+                if (this.totalRotation >= 360) { handlePlayerSelection(); }
+            }
+        }
+        const bottle = new Bottle(bottleEl);
+
+        // --- Player Management & Game Setup ---
+        const updatePlayerList = () => {
+            playerList.innerHTML = '';
+            players.forEach(player => {
+                const tag = document.createElement('div');
+                tag.className = 'player-tag'; tag.textContent = player;
+                tag.onclick = () => removePlayer(player); playerList.appendChild(tag);
+            });
+            startGameBtn.disabled = players.length < 2;
+        };
+        const addPlayer = () => {
+            const name = playerInput.value.trim();
+            if (name && !players.includes(name)) {
+                players.push(name); playerInput.value = ''; updatePlayerList();
+            }
+            playerInput.focus();
+        };
+        const removePlayer = (name) => {
+            players = players.filter(p => p !== name); updatePlayerList();
+        };
+        addPlayerBtn.addEventListener('click', addPlayer);
+        playerInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addPlayer(); });
+        function setGameMode(mode) {
+            gameMode = mode;
+            [mode1Btn, mode2Btn, mode3Btn].forEach(btn => btn.classList.remove('active'));
+            if (mode === 1) mode1Btn.classList.add('active');
+            else if (mode === 2) mode2Btn.classList.add('active');
+            else if (mode === 3) mode3Btn.classList.add('active');
+        }
+        mode1Btn.addEventListener('click', () => setGameMode(1));
+        mode2Btn.addEventListener('click', () => setGameMode(2));
+        mode3Btn.addEventListener('click', () => setGameMode(3));
+        backToSetupBtn.addEventListener('click', () => {
+            gameScreen.classList.add('hidden'); setupScreen.classList.remove('hidden');
+        });
+
+        // --- Shuffle and Start Game ---
+        const shuffleArray = (array) => [...array].sort(() => Math.random() - 0.5);
+
+        startGameBtn.addEventListener('click', () => {
+            turnCounter = 0; // Reset turn counter for new game
+            shuffledTruths.l1 = shuffleArray(truths_l1); shuffledDares.l1 = shuffleArray(dares_l1);
+            shuffledTruths.l2 = shuffleArray(truths_l2); shuffledDares.l2 = shuffleArray(dares_l2);
+            shuffledTruths.l3 = shuffleArray(truths_l3); shuffledDares.l3 = shuffleArray(dares_l3);
+            shuffledTruths.l4 = shuffleArray(truths_l4); shuffledDares.l4 = shuffleArray(dares_l4);
+            setupScreen.classList.add('hidden'); gameScreen.classList.remove('hidden');
+            setupArena();
+        });
+
+        const setupArena = () => {
+            arena.innerHTML = ''; // Clear arena except bottle
+            arena.appendChild(bottleEl);
+            playerElements = [];
+            const numPlayers = players.length; const radius = arena.offsetWidth / 2 * 0.9;
+            const angleIncrement = 360 / numPlayers;
+            players.forEach((name, i) => {
+                const angle = (i * angleIncrement); const rad = (angle - 90) * (Math.PI / 180);
+                const x = (arena.offsetWidth / 2) + radius * Math.cos(rad);
+                const y = (arena.offsetHeight / 2) + radius * Math.sin(rad);
+                const nameEl = document.createElement('div');
+                nameEl.className = 'player-name'; nameEl.textContent = name;
+                nameEl.style.left = `${x}px`; nameEl.style.top = `${y}px`;
+                arena.appendChild(nameEl); playerElements.push(nameEl);
+            });
+        };
+
+        // --- Bottle Interaction ---
+        let startAngle = 0, isDragging = false, lastMoveTime = 0, lastAngle = 0;
+        const handleDragStart = (e) => {
+            e.preventDefault(); if (isSpinning) return;
+            isDragging = true; bottleEl.style.cursor = 'grabbing';
+            const rect = bottleEl.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2, centerY = rect.top + rect.height / 2;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            startAngle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
+            lastAngle = bottle.angle; lastMoveTime = Date.now();
+        };
+        const handleDragMove = (e) => {
+            if (!isDragging) return; e.preventDefault();
+            const rect = bottleEl.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2, centerY = rect.top + rect.height / 2;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const currentAngle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
+            const deltaAngle = currentAngle - startAngle;
+            bottle.angle = lastAngle + deltaAngle;
+            bottle.element.style.transform = `rotate(${bottle.angle}deg)`;
+            bottle.updateGlow();
+        };
+        const handleDragEnd = () => {
+            if (!isDragging) return; isDragging = false; bottleEl.style.cursor = 'grab';
+            const timeDiff = Date.now() - lastMoveTime;
+            const angleDiff = bottle.angle - lastAngle;
+            let velocity = 0;
+            if (timeDiff > 0 && timeDiff < 100) velocity = (angleDiff / timeDiff) * 30;
+            bottle.spin(velocity);
+        };
+        bottleEl.addEventListener('mousedown', handleDragStart);
+        document.addEventListener('mousemove', handleDragMove);
+        document.addEventListener('mouseup', handleDragEnd);
+        bottleEl.addEventListener('touchstart', handleDragStart, { passive: false });
+        document.addEventListener('touchmove', handleDragMove, { passive: false });
+        document.addEventListener('touchend', handleDragEnd);
+
+        // --- Player Selection & Modal Logic ---
+        const handlePlayerSelection = () => {
+            const sliceSize = 360 / players.length; const sliceOffset = sliceSize / 2;
+            const normalizedAngle = ((bottle.angle % 360) + 360) % 360;
+            const finalPointerAngle = (normalizedAngle + sliceOffset) % 360;
+            const selectedIndex = Math.floor(finalPointerAngle / sliceSize);
+            currentPlayer = players[selectedIndex];
+            const selectedEl = playerElements[selectedIndex];
+            if (selectedEl) selectedEl.classList.add('selected');
+            setTimeout(() => showModal(currentPlayer), 1000);
+        };
+
+        const showModal = (playerA) => {
+            modalTaskText.style.display = 'none';
+            modalButtons.innerHTML = '';
+            switch(gameMode) {
+                case 1:
+                    modalTitle.innerHTML = `<span class="player-highlight">${playerA}</span> chuna gaya hai!`;
+                    modalButtons.innerHTML = `<button id="continue-btn" class="btn">Aage Badho</button>`;
+                    modalButtons.querySelector('#continue-btn').onclick = closeModal;
+                    break;
+                case 2:
+                    const challengers = players.filter(p => p !== playerA);
+                    const playerB = challengers.length > 0 ? challengers[Math.floor(Math.random() * challengers.length)] : null;
+                    modalTitle.innerHTML = playerB ? `<span class="player-highlight">${playerB}</span>, ab tumhari baari hai<span class="player-highlight">${playerA}</span> ko challenge karne ki!` : `<span class="player-highlight">${playerA}</span>, Truth ya Dare?`;
+                    modalButtons.innerHTML = `<button class="btn">Truth</button><button class="btn">Dare</button>`;
+                    modalButtons.querySelectorAll('.btn').forEach(btn => btn.onclick = closeModal);
+                    break;
+                case 3:
+                    modalTitle.innerHTML = `<span class="player-highlight">${playerA}</span>, Truth ya Dare?`;
+                    modalButtons.innerHTML = `<button id="truth-btn" class="btn">Truth</button><button id="dare-btn" class="btn">Dare</button>`;
+                    modalButtons.querySelector('#truth-btn').onclick = () => displayTask('truth');
+                    modalButtons.querySelector('#dare-btn').onclick = () => displayTask('dare');
+                    break;
+            }
+            modal.classList.add('visible');
+        };
+
+        const displayTask = (type) => {
+            turnCounter++;
+            let task;
+            let level;
+            if (turnCounter <= 4) level = 'l1';
+            else if (turnCounter <= 15) level = 'l2';
+            else if (turnCounter <= 30) level = 'l3';
+            else level = 'l4';
+
+            const truthList = shuffledTruths[level];
+            const dareList = shuffledDares[level];
+
+            if (type === 'truth') {
+                if (truthList.length === 0) shuffledTruths[level] = shuffleArray(eval(`truths_${level}`));
+                task = shuffledTruths[level].pop();
+            } else {
+                if (dareList.length === 0) shuffledDares[level] = shuffleArray(eval(`dares_${level}`));
+                task = shuffledDares[level].pop();
+            }
+            modalTitle.innerHTML = `For <span class="player-highlight">${currentPlayer}</span>`;
+            modalTaskText.textContent = task;
+            modalTaskText.style.display = 'block';
+            modalButtons.innerHTML = `<button id="done-btn" class="btn">Ho Gaya</button>`;
+            modalButtons.querySelector('#done-btn').onclick = closeModal;
+        };
+        
+        const closeModal = () => {
+             modal.classList.remove('visible');
+             document.querySelectorAll('.player-name').forEach(el => el.classList.remove('selected'));
+        }
+
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    </script>
+</body>
+</html>
+
+
